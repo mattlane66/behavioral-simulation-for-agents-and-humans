@@ -37,14 +37,15 @@ def recommendation(root: Path) -> str:
     if target_i >= GRADE_INDEX["L1_PERSON_GROUNDED"] and not real_grounding:
         return "GROUND: add real OBSERVED_HUMAN evidence used for GROUNDING or TRAINING; context-only human data does not establish L1+."
 
-    if target_i >= GRADE_INDEX["L2_POPULATION_GROUNDED"]:
+    population_mode = state.get("mode") in {"POPULATION_PREDICTION", "MULTI_AGENT_DYNAMICS"}
+    if target_i >= GRADE_INDEX["L2_POPULATION_GROUNDED"] and population_mode:
         population = state.get("population_design", {})
         if population.get("status") != "DEFINED":
-            return "GROUND: define the target-population design before making population estimates."
+            return "GROUND: define the target-population design before making population or system estimates."
         if not nonempty(population.get("sampling_or_coverage")):
-            return "GROUND: record how the target population is sampled or covered before claiming L2+."
+            return "GROUND: record how the target population is sampled or covered before claiming population-grounded evidence."
         if not isinstance(population.get("sample_size"), int) or population.get("sample_size") <= 0:
-            return "GROUND: record a positive population sample_size before claiming L2+."
+            return "GROUND: record a positive population sample_size before claiming population-grounded evidence."
 
     if state.get("model_config", {}).get("status") != "DEFINED":
         return "SPECIFY: freeze model/version/configuration, primary correctness unit, counterfactual distance, and validation metric."
@@ -81,7 +82,7 @@ def recommendation(root: Path) -> str:
             or state_cal.get("calibration_file_status") != "VALID"
             or not state_cal.get("decision_threshold_predeclared")
             or not state_cal.get("predicted_error_evaluated_out_of_sample")
-            or not state.get("validation", {}).get("subgroup_checked")
+            or (population_mode and not state.get("validation", {}).get("subgroup_checked"))
             or not nonempty(calibration.get("model_scope"))
             or not nonempty(calibration.get("split_method"))
             or calibration.get("decision_threshold") is None
@@ -100,8 +101,10 @@ def recommendation(root: Path) -> str:
 
     stress = state.get("stress_tests", {})
     required = ["model_sensitivity", "prompt_config_sensitivity", "counterfactual_distance"]
-    if target_i >= GRADE_INDEX["L2_POPULATION_GROUNDED"]:
+    if population_mode and target_i >= GRADE_INDEX["L2_POPULATION_GROUNDED"]:
         required.extend(["subgroup_error", "drift_freshness"])
+    elif target_i >= GRADE_INDEX["L4_DECISION_CALIBRATED"]:
+        required.append("drift_freshness")
     if state.get("mode") == "MULTI_AGENT_DYNAMICS":
         required.append("multi_agent_failures")
     if any(stress.get(k) == "NOT_RUN" for k in required):
