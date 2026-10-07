@@ -9,7 +9,7 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["id","run_id","correctness_unit","metric","predicted","observed","computed_error","held_out","split_unit","split_group","population_match","time_match","subgroup","notes"],
+        "required": ["id","run_id","correctness_unit","metric","predicted","observed","observed_evidence_ids","computed_error","held_out","split_unit","split_group","population_match","time_match","subgroup","notes"],
         "properties": {
           "id": {"type": "string","pattern": "^V[0-9]{3,}$"},
           "run_id": {"type": "string","pattern": "^R[0-9]{3,}$"},
@@ -17,6 +17,7 @@
           "metric": {"enum": ["TVD","ABSOLUTE_ERROR","ACCURACY","CORRELATION","OTHER"]},
           "predicted": {"type": ["object","number","array"]},
           "observed": {"type": ["object","number","array"]},
+          "observed_evidence_ids": {"type": "array","items": {"type": "string","pattern": "^E[0-9]{3,}$"}},
           "computed_error": {"type": ["number","null"],"minimum": 0},
           "held_out": {"type": "boolean"},
           "split_unit": {"enum": ["PERSON","QUESTION","STUDY","CONDITION","TIME","GEOGRAPHY","OTHER"]},
