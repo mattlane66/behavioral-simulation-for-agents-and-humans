@@ -534,5 +534,78 @@ class BehavioralSimulationTests(unittest.TestCase):
 
 
 
+    def test_next_move_rejects_context_only_human_as_grounding(self):
+        root = self.make_workspace(mode="INDIVIDUAL_PROXY", target="L1_PERSON_GROUNDED")
+        state = self.read(root, "simulation-state.json")
+        state["scenario_spec"]["accepted"] = True
+        self.write(root, "simulation-state.json", state)
+        ev = self.read(root, "evidence-ledger.json")
+        ev["entries"].append({
+            "id": "E001", "evidence_type": "OBSERVED_HUMAN",
+            "claim": "Context only", "source": "context.txt",
+            "provenance": "background source", "use": "CONTEXT",
+            "held_out": False, "population_scope": "target", "time_scope": "2026",
+            "notes": "",
+        })
+        self.write(root, "evidence-ledger.json", ev)
+        p = run("next_simulation_move.py", str(root))
+        self.assertEqual(p.returncode, 0, p.stderr)
+        self.assertIn("GROUNDING or TRAINING", p.stdout)
+
+    def test_next_move_requires_population_sampling_details(self):
+        root = self.make_workspace(mode="POPULATION_PREDICTION", target="L2_POPULATION_GROUNDED")
+        state = self.read(root, "simulation-state.json")
+        state["scenario_spec"]["accepted"] = True
+        state["population_design"]["status"] = "DEFINED"
+        self.write(root, "simulation-state.json", state)
+        ev = self.read(root, "evidence-ledger.json")
+        ev["entries"].append({
+            "id": "E001", "evidence_type": "OBSERVED_HUMAN",
+            "claim": "Training choices", "source": "train.csv",
+            "provenance": "study sample", "use": "TRAINING",
+            "held_out": False, "population_scope": "target", "time_scope": "2026",
+            "notes": "", "split_unit": "QUESTION", "split_group": "train",
+        })
+        self.write(root, "evidence-ledger.json", ev)
+        p = run("next_simulation_move.py", str(root))
+        self.assertEqual(p.returncode, 0, p.stderr)
+        self.assertIn("sampled or covered", p.stdout)
+
+    def test_next_move_requests_grade_promotion_after_valid_l3_evidence(self):
+        root = self.make_valid_l3_workspace()
+        state = self.read(root, "simulation-state.json")
+        state["current_grade"] = "L2_POPULATION_GROUNDED"
+        self.write(root, "simulation-state.json", state)
+        p = run("next_simulation_move.py", str(root))
+        self.assertEqual(p.returncode, 0, p.stderr)
+        self.assertIn("GRADE:", p.stdout)
+        self.assertIn("L3_HELD_OUT_VALIDATED", p.stdout)
+
+    def test_next_move_l0_does_not_require_population_subgroup_or_drift_stress(self):
+        root = self.make_workspace(mode="PLAUSIBILITY_SPACE", target="L0_ROLEPLAY")
+        state = self.read(root, "simulation-state.json")
+        state["scenario_spec"]["accepted"] = True
+        state["model_config"].update({
+            "status": "DEFINED", "provider": "test", "model": "sim",
+            "version": "1", "configuration": "fixed", "frozen_for_validation": False,
+        })
+        state["stress_tests"]["model_sensitivity"] = "PASSED"
+        state["stress_tests"]["prompt_config_sensitivity"] = "PASSED"
+        state["stress_tests"]["counterfactual_distance"] = "PASSED"
+        self.write(root, "simulation-state.json", state)
+        runs = self.read(root, "runs.json")
+        runs["entries"].append({
+            "id": "R001", "ran_at": "2026-10-07", "mode": "PLAUSIBILITY_SPACE",
+            "model": "sim", "model_version": "1", "configuration": "fixed",
+            "seed": 1, "sample_size": 10, "evidence_ids": [],
+            "estimate": {"mechanisms": ["edge case"]}, "notes": "",
+        })
+        self.write(root, "runs.json", runs)
+        p = run("next_simulation_move.py", str(root))
+        self.assertEqual(p.returncode, 0, p.stderr)
+        self.assertIn("DELIVER:", p.stdout)
+
+
+
 if __name__ == "__main__":
     unittest.main()
