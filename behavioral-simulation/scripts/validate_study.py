@@ -80,6 +80,8 @@ def validate(data: dict[str, Any]) -> list[str]:
         errors.append("mode drift between input and state")
     if state.get("current_grade") not in GRADES or state.get("target_grade") not in GRADES:
         errors.append("state invalid evidence grade")
+    if state.get("target_grade") in GRADES and inp.get("target_grade") in GRADES and state.get("target_grade") != inp.get("target_grade"):
+        errors.append("target grade drift between input and state")
     if state.get("primary_correctness_unit") not in CORRECTNESS_UNITS:
         errors.append("state invalid primary_correctness_unit")
 
@@ -111,6 +113,8 @@ def validate(data: dict[str, Any]) -> list[str]:
             errors.append(f"{owner} synthetic output cannot substitute for real grounding at graded levels")
         if et == "OBSERVED_HUMAN":
             observed_human.append(row)
+            if not nonempty(row.get("source")):
+                errors.append(f"{owner} OBSERVED_HUMAN requires source")
             if not nonempty(row.get("provenance")):
                 errors.append(f"{owner} OBSERVED_HUMAN requires provenance")
             if use in {"GROUNDING","TRAINING"}:
@@ -151,6 +155,10 @@ def validate(data: dict[str, Any]) -> list[str]:
         for eid in row.get("evidence_ids", []):
             if eid not in eids:
                 errors.append(f"{owner} references unknown evidence {eid}")
+                continue
+            source_row = evidence_by_id.get(eid, {})
+            if source_row.get("held_out") is True or source_row.get("use") in {"VALIDATION","CALIBRATION"}:
+                errors.append(f"{owner} cannot consume held-out validation/calibration evidence {eid}")
 
     vids: set[str] = set()
     held_validations = []
@@ -161,7 +169,8 @@ def validate(data: dict[str, Any]) -> list[str]:
             errors.append(f"{owner} invalid/duplicate id")
             continue
         vids.add(vid)
-        if row.get("run_id") not in rids:
+        run_id = row.get("run_id")
+        if run_id not in rids:
             errors.append(f"{owner} references unknown run")
         observed_ids = row.get("observed_evidence_ids", [])
         if not isinstance(observed_ids, list):
@@ -188,6 +197,13 @@ def validate(data: dict[str, Any]) -> list[str]:
                 errors.append(f"{owner} split_unit must match linked observed evidence {eid}")
         if row.get("held_out") is True:
             held_validations.append(row)
+        if row.get("correctness_unit") == "DISTRIBUTION" and run_id in rids:
+            source_run = next((r for r in runs.get("entries", []) if r.get("id") == run_id), None)
+            if source_run and isinstance(source_run.get("estimate"), dict) and isinstance(row.get("predicted"), dict):
+                run_estimate = {k: float(v) for k, v in source_run["estimate"].items()}
+                validation_prediction = {k: float(v) for k, v in row["predicted"].items()}
+                if run_estimate != validation_prediction:
+                    errors.append(f"{owner} predicted distribution must match referenced run estimate")
         try:
             expected = compute(row)
             actual = row.get("computed_error")
@@ -214,6 +230,9 @@ def validate(data: dict[str, Any]) -> list[str]:
             errors.append(f"{grade} requires a defined population design")
         if not nonempty(population_design.get("sampling_or_coverage")):
             errors.append(f"{grade} requires population sampling/coverage")
+        sample_size = population_design.get("sample_size")
+        if not isinstance(sample_size, int) or sample_size <= 0:
+            errors.append(f"{grade} requires a positive population sample_size")
 
     if gi < GRADE_INDEX["L2_POPULATION_GROUNDED"] and state.get("mode") == "POPULATION_PREDICTION":
         if state.get("endpoint") in {"USE_WITH_CAUTION","DECISION_SUPPORT"}:
@@ -227,6 +246,17 @@ def validate(data: dict[str, Any]) -> list[str]:
         if not primary_held:
             errors.append(f"{grade} requires held-out validation for primary correctness unit {primary}")
         validation_state = state.get("validation", {})
+        if validation_state.get("status") != "COMPLETE":
+            errors.append(f"{grade} requires validation status COMPLETE")
+        if validation_state.get("held_out") is not True:
+            errors.append(f"{grade} requires validation held_out = true")
+        state_validation_ids = validation_state.get("validation_ids", [])
+        if not state_validation_ids:
+            errors.append(f"{grade} requires validation_ids in state")
+        held_vids_now = {v.get("id") for v in held_validations}
+        for vid in state_validation_ids:
+            if vid not in held_vids_now:
+                errors.append(f"{grade} state validation id {vid} must reference a held-out validation")
         if not validation_state.get("metric_predeclared"):
             errors.append(f"{grade} requires predeclared validation metric")
         declared_metric = validation_state.get("metric")
@@ -245,6 +275,8 @@ def validate(data: dict[str, Any]) -> list[str]:
             errors.append("L4 requires out-of-sample evaluation of predicted error")
         if not state.get("validation", {}).get("subgroup_checked"):
             errors.append("L4 requires subgroup validation checks")
+        if state_cal.get("status") != "VALID" or state_cal.get("calibration_file_status") != "VALID":
+            errors.append("L4 requires state calibration status and calibration_file_status VALID")
         if cal.get("status") != "VALID":
             errors.append("L4 requires calibration.json status VALID")
         if not nonempty(cal.get("model_scope")):
@@ -267,6 +299,10 @@ def validate(data: dict[str, Any]) -> list[str]:
         if not cal.get("buckets"):
             errors.append("L4 requires empirically evaluated confidence/error buckets")
         freshness = cal.get("freshness", {})
+        if not nonempty(freshness.get("last_validated_at")):
+            errors.append("L4 requires calibration last_validated_at")
+        if not freshness.get("revalidation_triggers"):
+            errors.append("L4 requires revalidation triggers")
         if freshness.get("drift_status") not in {"OK","MONITOR","STALE"}:
             errors.append("L4 requires explicit drift_status")
         if freshness.get("drift_status") == "STALE":
@@ -275,9 +311,13 @@ def validate(data: dict[str, Any]) -> list[str]:
     if state.get("primary_correctness_unit") == "PLAUSIBILITY_ONLY" and gi >= GRADE_INDEX["L3_HELD_OUT_VALIDATED"]:
         errors.append("plausibility/believability alone cannot establish L3/L4 predictive validity")
 
+    if rids and state.get("scenario_spec", {}).get("accepted") is not True:
+        errors.append("recorded runs require an accepted scenario specification")
     if rids and state.get("model_config", {}).get("status") != "DEFINED":
         errors.append("recorded runs require defined model_config in state")
 
+    if grade == "L0_ROLEPLAY" and state.get("endpoint") in {"USE_WITH_CAUTION","DECISION_SUPPORT"}:
+        errors.append("L0_ROLEPLAY cannot be promoted beyond EXPLORE/TEST_REAL_WORLD/DO_NOT_USE")
     if state.get("endpoint") == "DECISION_SUPPORT" and grade != "L4_DECISION_CALIBRATED":
         errors.append("DECISION_SUPPORT endpoint requires L4_DECISION_CALIBRATED")
 
