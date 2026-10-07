@@ -325,5 +325,182 @@ class BehavioralSimulationTests(unittest.TestCase):
 
 
 
+    def test_valid_l1_individual_proxy_passes(self):
+        root = self.make_workspace(mode="INDIVIDUAL_PROXY", target="L1_PERSON_GROUNDED")
+        state = self.read(root, "simulation-state.json")
+        state["scenario_spec"]["accepted"] = True
+        state["current_grade"] = "L1_PERSON_GROUNDED"
+        state["model_config"].update({
+            "status": "DEFINED", "provider": "test", "model": "sim",
+            "version": "1", "configuration": "fixed", "frozen_for_validation": False,
+        })
+        state["endpoint"] = "EXPLORE"
+        self.write(root, "simulation-state.json", state)
+        ev = self.read(root, "evidence-ledger.json")
+        ev["entries"].append({
+            "id": "E001", "evidence_type": "OBSERVED_HUMAN",
+            "claim": "Participant interview", "source": "interview.txt",
+            "provenance": "consented participant interview", "use": "GROUNDING",
+            "held_out": False, "population_scope": "participant P1",
+            "time_scope": "2026", "notes": "", "split_unit": "PERSON",
+            "split_group": "p1",
+        })
+        self.write(root, "evidence-ledger.json", ev)
+        runs = self.read(root, "runs.json")
+        runs["entries"].append({
+            "id": "R001", "ran_at": "2026-10-07", "mode": "INDIVIDUAL_PROXY",
+            "model": "sim", "model_version": "1", "configuration": "fixed",
+            "seed": 1, "sample_size": 1, "evidence_ids": ["E001"],
+            "estimate": {"response": "A"}, "notes": "",
+        })
+        self.write(root, "runs.json", runs)
+        p = run("validate_study.py", str(root))
+        self.assertEqual(p.returncode, 0, p.stdout + p.stderr)
+
+    def test_valid_l0_multi_agent_exploration_passes(self):
+        root = self.make_workspace(mode="MULTI_AGENT_DYNAMICS", target="L0_ROLEPLAY")
+        state = self.read(root, "simulation-state.json")
+        state["scenario_spec"]["accepted"] = True
+        state["model_config"].update({
+            "status": "DEFINED", "provider": "test", "model": "sim",
+            "version": "1", "configuration": "fixed", "frozen_for_validation": False,
+        })
+        state["endpoint"] = "EXPLORE"
+        self.write(root, "simulation-state.json", state)
+        runs = self.read(root, "runs.json")
+        runs["entries"].append({
+            "id": "R001", "ran_at": "2026-10-07", "mode": "MULTI_AGENT_DYNAMICS",
+            "model": "sim", "model_version": "1", "configuration": "fixed",
+            "seed": 1, "sample_size": 20, "evidence_ids": [],
+            "estimate": {"mechanisms": ["coordination failure"]}, "notes": "",
+        })
+        self.write(root, "runs.json", runs)
+        p = run("validate_study.py", str(root))
+        self.assertEqual(p.returncode, 0, p.stdout + p.stderr)
+
+    def test_valid_l4_decision_calibrated_study_passes(self):
+        root = self.make_valid_l3_workspace()
+        inp = self.read(root, "input.json")
+        inp["target_grade"] = "L4_DECISION_CALIBRATED"
+        self.write(root, "input.json", inp)
+        state = self.read(root, "simulation-state.json")
+        state["target_grade"] = "L4_DECISION_CALIBRATED"
+        state["current_grade"] = "L4_DECISION_CALIBRATED"
+        state["validation"]["subgroup_checked"] = True
+        state["calibration"].update({
+            "status": "VALID",
+            "decision_threshold_predeclared": True,
+            "predicted_error_evaluated_out_of_sample": True,
+            "calibration_file_status": "VALID",
+        })
+        state["endpoint"] = "DECISION_SUPPORT"
+        self.write(root, "simulation-state.json", state)
+        cal = self.read(root, "calibration.json")
+        cal.update({
+            "status": "VALID", "model_scope": "sim v1 / target population / choice questions",
+            "decision_metric": "TVD", "decision_threshold": 0.16,
+            "validation_ids": ["V001"], "split_method": "grouped out-of-sample validation",
+            "error_prediction_metrics": {"rmse": 0.08, "auroc": 0.73},
+            "buckets": [{"name": "high", "empirical_pass_rate": 0.95}],
+        })
+        cal["freshness"].update({
+            "last_validated_at": "2026-10-07",
+            "drift_status": "OK",
+            "revalidation_triggers": ["model change", "population change"],
+        })
+        self.write(root, "calibration.json", cal)
+        p = run("validate_study.py", str(root))
+        self.assertEqual(p.returncode, 0, p.stdout + p.stderr)
+
+    def test_target_grade_cannot_drift_between_input_and_state(self):
+        root = self.make_workspace(target="L0_ROLEPLAY")
+        state = self.read(root, "simulation-state.json")
+        state["target_grade"] = "L1_PERSON_GROUNDED"
+        self.write(root, "simulation-state.json", state)
+        p = run("validate_study.py", str(root))
+        self.assertNotEqual(p.returncode, 0)
+        self.assertIn("target grade drift", p.stdout)
+
+    def test_run_requires_accepted_scenario(self):
+        root = self.make_workspace(mode="PLAUSIBILITY_SPACE")
+        state = self.read(root, "simulation-state.json")
+        state["model_config"].update({
+            "status": "DEFINED", "provider": "test", "model": "sim",
+            "version": "1", "configuration": "", "frozen_for_validation": False,
+        })
+        self.write(root, "simulation-state.json", state)
+        runs = self.read(root, "runs.json")
+        runs["entries"].append({
+            "id": "R001", "ran_at": "2026-10-07", "mode": "PLAUSIBILITY_SPACE",
+            "model": "sim", "model_version": "1", "configuration": "",
+            "seed": 1, "sample_size": 10, "evidence_ids": [],
+            "estimate": {}, "notes": "",
+        })
+        self.write(root, "runs.json", runs)
+        p = run("validate_study.py", str(root))
+        self.assertNotEqual(p.returncode, 0)
+        self.assertIn("accepted scenario", p.stdout)
+
+    def test_run_cannot_consume_heldout_validation_evidence(self):
+        root = self.make_valid_l3_workspace()
+        runs = self.read(root, "runs.json")
+        runs["entries"][0]["evidence_ids"].append("E002")
+        self.write(root, "runs.json", runs)
+        p = run("validate_study.py", str(root))
+        self.assertNotEqual(p.returncode, 0)
+        self.assertIn("cannot consume held-out", p.stdout)
+
+    def test_distribution_validation_prediction_must_match_run(self):
+        root = self.make_valid_l3_workspace()
+        vals = self.read(root, "validations.json")
+        vals["entries"][0]["predicted"] = {"A": 0.65, "B": 0.35}
+        vals["entries"][0]["computed_error"] = 0.05
+        self.write(root, "validations.json", vals)
+        p = run("validate_study.py", str(root))
+        self.assertNotEqual(p.returncode, 0)
+        self.assertIn("must match referenced run estimate", p.stdout)
+
+    def test_l2_requires_positive_population_sample_size(self):
+        root = self.make_workspace(target="L2_POPULATION_GROUNDED")
+        state = self.read(root, "simulation-state.json")
+        state["current_grade"] = "L2_POPULATION_GROUNDED"
+        state["population_design"].update({
+            "status": "DEFINED", "sampling_or_coverage": "target sample", "sample_size": None,
+        })
+        self.write(root, "simulation-state.json", state)
+        ev = self.read(root, "evidence-ledger.json")
+        ev["entries"].append({
+            "id": "E001", "evidence_type": "OBSERVED_HUMAN",
+            "claim": "Observed choices", "source": "choices.csv",
+            "provenance": "target sample", "use": "TRAINING", "held_out": False,
+            "population_scope": "target users", "time_scope": "2026", "notes": "",
+            "split_unit": "QUESTION", "split_group": "train",
+        })
+        self.write(root, "evidence-ledger.json", ev)
+        p = run("validate_study.py", str(root))
+        self.assertNotEqual(p.returncode, 0)
+        self.assertIn("positive population sample_size", p.stdout)
+
+    def test_l0_cannot_be_promoted_to_use_with_caution(self):
+        root = self.make_workspace(mode="MULTI_AGENT_DYNAMICS", target="L0_ROLEPLAY")
+        state = self.read(root, "simulation-state.json")
+        state["endpoint"] = "USE_WITH_CAUTION"
+        state["stress_tests"]["multi_agent_failures"] = "PASSED"
+        self.write(root, "simulation-state.json", state)
+        p = run("validate_study.py", str(root))
+        self.assertNotEqual(p.returncode, 0)
+        self.assertIn("L0_ROLEPLAY cannot be promoted", p.stdout)
+
+    def test_l3_state_validation_ids_must_reference_holdout(self):
+        root = self.make_valid_l3_workspace()
+        state = self.read(root, "simulation-state.json")
+        state["validation"]["validation_ids"] = ["V999"]
+        self.write(root, "simulation-state.json", state)
+        p = run("validate_study.py", str(root))
+        self.assertNotEqual(p.returncode, 0)
+        self.assertIn("state validation id V999", p.stdout)
+
+
+
 if __name__ == "__main__":
     unittest.main()
