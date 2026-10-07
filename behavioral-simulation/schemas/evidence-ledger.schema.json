@@ -20,7 +20,9 @@
           "held_out": {"type": "boolean"},
           "population_scope": {"type": "string"},
           "time_scope": {"type": "string"},
-          "notes": {"type": "string"}
+          "notes": {"type": "string"},
+          "split_unit": {"enum": ["PERSON","QUESTION","STUDY","CONDITION","TIME","GEOGRAPHY","OTHER",null]},
+          "split_group": {"type": ["string","null"]}
         },
         "additionalProperties": false
       }
