@@ -84,9 +84,13 @@ def validate(data: dict[str, Any]) -> list[str]:
         errors.append("state invalid primary_correctness_unit")
 
     eids: set[str] = set()
+    evidence_by_id: dict[str, dict[str, Any]] = {}
     observed_human = []
+    real_grounding_ids: set[str] = set()
     validation_evidence_ids = set()
     grounding_evidence_ids = set()
+    grounding_split_groups: set[tuple[str, str]] = set()
+    validation_split_groups: set[tuple[str, str]] = set()
     for i, row in enumerate(evidence.get("entries", []) if isinstance(evidence, dict) else []):
         owner = f"evidence[{i}]"
         eid = row.get("id") if isinstance(row, dict) else None
@@ -94,6 +98,7 @@ def validate(data: dict[str, Any]) -> list[str]:
             errors.append(f"{owner} invalid/duplicate id")
             continue
         eids.add(eid)
+        evidence_by_id[eid] = row
         et = row.get("evidence_type")
         if et not in EVIDENCE_TYPES:
             errors.append(f"{owner} invalid evidence_type")
@@ -106,14 +111,30 @@ def validate(data: dict[str, Any]) -> list[str]:
             errors.append(f"{owner} synthetic output cannot substitute for real grounding at graded levels")
         if et == "OBSERVED_HUMAN":
             observed_human.append(row)
+            if not nonempty(row.get("provenance")):
+                errors.append(f"{owner} OBSERVED_HUMAN requires provenance")
+            if use in {"GROUNDING","TRAINING"}:
+                real_grounding_ids.add(eid)
+        split_unit = row.get("split_unit")
+        split_group = row.get("split_group")
         if use in {"GROUNDING","TRAINING"}:
             grounding_evidence_ids.add(eid)
+            if nonempty(split_group):
+                grounding_split_groups.add((str(split_unit or "OTHER"), split_group.strip()))
+        if use in {"VALIDATION","CALIBRATION"} and row.get("held_out") is True:
+            if not nonempty(split_group):
+                errors.append(f"{owner} held-out human evidence requires split_group")
+            else:
+                validation_split_groups.add((str(split_unit or "OTHER"), split_group.strip()))
         if use == "VALIDATION" and row.get("held_out") is True:
             validation_evidence_ids.add(eid)
 
     overlap = grounding_evidence_ids & validation_evidence_ids
     if overlap:
         errors.append(f"holdout leakage: evidence used for grounding/training and held-out validation: {sorted(overlap)}")
+    split_overlap = grounding_split_groups & validation_split_groups
+    if split_overlap:
+        errors.append(f"holdout leakage: split groups appear in both grounding/training and held-out validation: {sorted(split_overlap)}")
 
     rids: set[str] = set()
     for i, row in enumerate(runs.get("entries", []) if isinstance(runs, dict) else []):
@@ -123,6 +144,8 @@ def validate(data: dict[str, Any]) -> list[str]:
             errors.append(f"{owner} invalid/duplicate id")
             continue
         rids.add(rid)
+        if row.get("mode") != state.get("mode"):
+            errors.append(f"{owner} mode must match study mode")
         if not nonempty(row.get("model")) or not nonempty(row.get("model_version")):
             errors.append(f"{owner} requires model and model_version")
         for eid in row.get("evidence_ids", []):
@@ -140,6 +163,29 @@ def validate(data: dict[str, Any]) -> list[str]:
         vids.add(vid)
         if row.get("run_id") not in rids:
             errors.append(f"{owner} references unknown run")
+        observed_ids = row.get("observed_evidence_ids", [])
+        if not isinstance(observed_ids, list):
+            errors.append(f"{owner} observed_evidence_ids must be a list")
+            observed_ids = []
+        if row.get("held_out") is True and not observed_ids:
+            errors.append(f"{owner} held-out validation requires observed_evidence_ids")
+        for eid in observed_ids:
+            source_row = evidence_by_id.get(eid)
+            if source_row is None:
+                errors.append(f"{owner} references unknown observed evidence {eid}")
+                continue
+            if source_row.get("evidence_type") != "OBSERVED_HUMAN":
+                errors.append(f"{owner} observed evidence {eid} must be OBSERVED_HUMAN")
+            if source_row.get("use") not in {"VALIDATION","CALIBRATION"} or source_row.get("held_out") is not True:
+                errors.append(f"{owner} observed evidence {eid} must be held-out validation/calibration evidence")
+            v_split_unit = row.get("split_unit")
+            e_split_unit = source_row.get("split_unit")
+            v_split_group = row.get("split_group")
+            e_split_group = source_row.get("split_group")
+            if nonempty(v_split_group) and nonempty(e_split_group) and v_split_group != e_split_group:
+                errors.append(f"{owner} split_group must match linked observed evidence {eid}")
+            if e_split_unit and v_split_unit and e_split_unit != v_split_unit:
+                errors.append(f"{owner} split_unit must match linked observed evidence {eid}")
         if row.get("held_out") is True:
             held_validations.append(row)
         try:
@@ -153,13 +199,21 @@ def validate(data: dict[str, Any]) -> list[str]:
 
     grade = state.get("current_grade")
     gi = GRADE_INDEX.get(grade, -1)
+    target_grade = state.get("target_grade")
+    target_gi = GRADE_INDEX.get(target_grade, -1)
 
-    if gi >= GRADE_INDEX["L1_PERSON_GROUNDED"] and not observed_human:
-        errors.append(f"{grade} requires real OBSERVED_HUMAN grounding")
+    if gi > target_gi >= 0:
+        errors.append(f"current_grade {grade} cannot exceed target_grade {target_grade}")
+
+    if gi >= GRADE_INDEX["L1_PERSON_GROUNDED"] and not real_grounding_ids:
+        errors.append(f"{grade} requires real OBSERVED_HUMAN grounding/training evidence")
 
     if gi >= GRADE_INDEX["L2_POPULATION_GROUNDED"]:
-        if state.get("population_design", {}).get("status") != "DEFINED":
+        population_design = state.get("population_design", {})
+        if population_design.get("status") != "DEFINED":
             errors.append(f"{grade} requires a defined population design")
+        if not nonempty(population_design.get("sampling_or_coverage")):
+            errors.append(f"{grade} requires population sampling/coverage")
 
     if gi < GRADE_INDEX["L2_POPULATION_GROUNDED"] and state.get("mode") == "POPULATION_PREDICTION":
         if state.get("endpoint") in {"USE_WITH_CAUTION","DECISION_SUPPORT"}:
@@ -168,21 +222,45 @@ def validate(data: dict[str, Any]) -> list[str]:
     if gi >= GRADE_INDEX["L3_HELD_OUT_VALIDATED"]:
         if not held_validations:
             errors.append(f"{grade} requires held-out real-outcome validation")
-        if not state.get("validation", {}).get("metric_predeclared"):
+        primary = state.get("primary_correctness_unit")
+        primary_held = [v for v in held_validations if v.get("correctness_unit") == primary]
+        if not primary_held:
+            errors.append(f"{grade} requires held-out validation for primary correctness unit {primary}")
+        validation_state = state.get("validation", {})
+        if not validation_state.get("metric_predeclared"):
             errors.append(f"{grade} requires predeclared validation metric")
+        declared_metric = validation_state.get("metric")
+        if not nonempty(declared_metric):
+            errors.append(f"{grade} requires the predeclared validation metric name")
+        elif primary_held and not any(v.get("metric") == declared_metric for v in primary_held):
+            errors.append(f"{grade} requires a primary held-out validation using predeclared metric {declared_metric}")
         if not state.get("model_config", {}).get("frozen_for_validation"):
             errors.append(f"{grade} requires model/config frozen for validation")
 
     if gi >= GRADE_INDEX["L4_DECISION_CALIBRATED"]:
+        state_cal = state.get("calibration", {})
+        if not state_cal.get("decision_threshold_predeclared"):
+            errors.append("L4 requires a predeclared decision threshold in state")
+        if not state_cal.get("predicted_error_evaluated_out_of_sample"):
+            errors.append("L4 requires out-of-sample evaluation of predicted error")
+        if not state.get("validation", {}).get("subgroup_checked"):
+            errors.append("L4 requires subgroup validation checks")
         if cal.get("status") != "VALID":
             errors.append("L4 requires calibration.json status VALID")
+        if not nonempty(cal.get("model_scope")):
+            errors.append("L4 requires calibration model_scope")
+        if not nonempty(cal.get("split_method")):
+            errors.append("L4 requires calibration split_method")
         if cal.get("decision_threshold") is None or not nonempty(cal.get("decision_metric")):
             errors.append("L4 requires decision metric and threshold")
         if not cal.get("validation_ids"):
             errors.append("L4 requires calibration validation_ids")
+        held_vids = {v.get("id") for v in held_validations}
         for vid in cal.get("validation_ids", []):
             if vid not in vids:
                 errors.append(f"calibration references unknown validation {vid}")
+            elif vid not in held_vids:
+                errors.append(f"calibration validation {vid} must be held out")
         metrics = cal.get("error_prediction_metrics", {})
         if not isinstance(metrics, dict) or not metrics:
             errors.append("L4 requires out-of-sample error-prediction metrics")
@@ -202,6 +280,13 @@ def validate(data: dict[str, Any]) -> list[str]:
 
     if state.get("endpoint") == "DECISION_SUPPORT" and grade != "L4_DECISION_CALIBRATED":
         errors.append("DECISION_SUPPORT endpoint requires L4_DECISION_CALIBRATED")
+
+    if state.get("phase") == "COMPLETE" and state.get("status") != "COMPLETE":
+        errors.append("COMPLETE phase requires status COMPLETE")
+    if state.get("status") == "COMPLETE" and state.get("phase") != "COMPLETE":
+        errors.append("status COMPLETE requires phase COMPLETE")
+    if state.get("phase") == "COMPLETE" and state.get("endpoint") == "UNSET":
+        errors.append("COMPLETE study requires a final endpoint")
 
     if state.get("mode") == "MULTI_AGENT_DYNAMICS" and rids:
         if state.get("stress_tests", {}).get("multi_agent_failures") == "NOT_RUN" and state.get("endpoint") in {"USE_WITH_CAUTION","DECISION_SUPPORT"}:
