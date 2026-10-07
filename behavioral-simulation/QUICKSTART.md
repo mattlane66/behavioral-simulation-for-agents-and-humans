@@ -54,6 +54,10 @@ python behavioral-simulation/scripts/validate_study.py research/my-simulation
 
 Fix errors before promoting the evidence grade or publishing a final result.
 
+For L3+ work, every held-out validation must point to the real held-out outcome through `observed_evidence_ids`. Grounding/training and validation records should also declare the relevant `split_unit` and `split_group` so the validator can catch leakage even when the same underlying data was copied into different evidence rows.
+
+For population or multi-agent claims at L2+, define `population_design.sampling_or_coverage` and a positive `sample_size`. Individual-proxy studies can reach L3/L4 through person-specific grounding plus held-out validation without pretending they are population-grounded.
+
 ## Output
 
 Use [`templates/simulation-report.md`](templates/simulation-report.md).
