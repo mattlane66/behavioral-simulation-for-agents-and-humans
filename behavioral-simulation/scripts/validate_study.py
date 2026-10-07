@@ -20,6 +20,7 @@ from _common import (
     read_json,
 )
 from calculate_metrics import compute
+from _schema import validate_file_against_schema
 
 EID = re.compile(r"^E[0-9]{3,}$")
 RID = re.compile(r"^R[0-9]{3,}$")
@@ -33,6 +34,15 @@ REQUIRED_FILES = [
     "validations.json",
     "calibration.json",
 ]
+
+SCHEMA_FILES = {
+    "input.json": "input.schema.json",
+    "simulation-state.json": "simulation-state.schema.json",
+    "evidence-ledger.json": "evidence-ledger.schema.json",
+    "runs.json": "runs.schema.json",
+    "validations.json": "validations.schema.json",
+    "calibration.json": "calibration.schema.json",
+}
 
 
 def nonempty(v: Any) -> bool:
@@ -61,6 +71,11 @@ def validate(data: dict[str, Any]) -> list[str]:
     runs = data.get("runs.json", {})
     vals = data.get("validations.json", {})
     cal = data.get("calibration.json", {})
+
+    schema_root = Path(__file__).resolve().parents[1] / "schemas"
+    for name, schema_name in SCHEMA_FILES.items():
+        if name in data:
+            errors.extend(validate_file_against_schema(data[name], schema_root / schema_name, name))
 
     for name, doc in data.items():
         if isinstance(doc, dict) and doc.get("schema_version") != SCHEMA_VERSION:
