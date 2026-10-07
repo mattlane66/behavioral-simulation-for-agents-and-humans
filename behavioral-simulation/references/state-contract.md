@@ -14,6 +14,8 @@ outputs/
 
 Narrative reports are derived views. They cannot silently upgrade the evidence grade or change evidence type.
 
+`validate_study.py` enforces the JSON schemas in `schemas/` as well as cross-file epistemic rules. Unknown top-level fields, wrong types, broken IDs, leakage, and invalid grade promotion should fail validation rather than being tolerated as prose conventions.
+
 ## `input.json`
 
 Human/project input:
@@ -55,9 +57,10 @@ Each record has:
 - person/population/time coverage;
 - whether it is used for grounding, training, validation, or context;
 - whether it is held out;
+- split unit/group when the record participates in training/grounding or held-out validation;
 - notes.
 
-The same outcome cannot be both training/grounding evidence and held-out validation for the same claim.
+The same outcome cannot be both training/grounding evidence and held-out validation for the same claim. Different evidence IDs do not make the data independent: if grounding/training and validation share the same declared split group, validation fails.
 
 ## `runs.json`
 
@@ -83,6 +86,7 @@ Held-out comparison records:
 - primary correctness unit;
 - predicted values;
 - observed values;
+- `observed_evidence_ids` linking the observed result to held-out `OBSERVED_HUMAN` evidence;
 - metric;
 - computed error;
 - split unit/group;
