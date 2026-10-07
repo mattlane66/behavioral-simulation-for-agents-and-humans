@@ -239,15 +239,16 @@ def validate(data: dict[str, Any]) -> list[str]:
     if gi >= GRADE_INDEX["L1_PERSON_GROUNDED"] and not real_grounding_ids:
         errors.append(f"{grade} requires real OBSERVED_HUMAN grounding/training evidence")
 
-    if gi >= GRADE_INDEX["L2_POPULATION_GROUNDED"]:
+    population_mode = state.get("mode") in {"POPULATION_PREDICTION", "MULTI_AGENT_DYNAMICS"}
+    if gi >= GRADE_INDEX["L2_POPULATION_GROUNDED"] and population_mode:
         population_design = state.get("population_design", {})
         if population_design.get("status") != "DEFINED":
-            errors.append(f"{grade} requires a defined population design")
+            errors.append(f"{grade} requires a defined population design for {state.get('mode')}")
         if not nonempty(population_design.get("sampling_or_coverage")):
-            errors.append(f"{grade} requires population sampling/coverage")
+            errors.append(f"{grade} requires population sampling/coverage for {state.get('mode')}")
         sample_size = population_design.get("sample_size")
         if not isinstance(sample_size, int) or sample_size <= 0:
-            errors.append(f"{grade} requires a positive population sample_size")
+            errors.append(f"{grade} requires a positive population sample_size for {state.get('mode')}")
 
     if gi < GRADE_INDEX["L2_POPULATION_GROUNDED"] and state.get("mode") == "POPULATION_PREDICTION":
         if state.get("endpoint") in {"USE_WITH_CAUTION","DECISION_SUPPORT"}:
@@ -288,8 +289,8 @@ def validate(data: dict[str, Any]) -> list[str]:
             errors.append("L4 requires a predeclared decision threshold in state")
         if not state_cal.get("predicted_error_evaluated_out_of_sample"):
             errors.append("L4 requires out-of-sample evaluation of predicted error")
-        if not state.get("validation", {}).get("subgroup_checked"):
-            errors.append("L4 requires subgroup validation checks")
+        if population_mode and not state.get("validation", {}).get("subgroup_checked"):
+            errors.append("L4 population/multi-agent use requires subgroup validation checks")
         if state_cal.get("status") != "VALID" or state_cal.get("calibration_file_status") != "VALID":
             errors.append("L4 requires state calibration status and calibration_file_status VALID")
         if cal.get("status") != "VALID":
