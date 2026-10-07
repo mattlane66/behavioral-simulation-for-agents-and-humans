@@ -502,5 +502,37 @@ class BehavioralSimulationTests(unittest.TestCase):
 
 
 
+    def test_schema_rejects_unknown_top_level_input_field(self):
+        root = self.make_workspace(mode="PLAUSIBILITY_SPACE")
+        inp = self.read(root, "input.json")
+        inp["invented_field"] = "should fail"
+        self.write(root, "input.json", inp)
+        p = run("validate_study.py", str(root))
+        self.assertNotEqual(p.returncode, 0)
+        self.assertIn("invented_field is not allowed", p.stdout)
+
+    def test_schema_rejects_wrong_run_sample_size_type(self):
+        root = self.make_workspace(mode="PLAUSIBILITY_SPACE")
+        state = self.read(root, "simulation-state.json")
+        state["scenario_spec"]["accepted"] = True
+        state["model_config"].update({
+            "status": "DEFINED", "provider": "test", "model": "sim",
+            "version": "1", "configuration": "", "frozen_for_validation": False,
+        })
+        self.write(root, "simulation-state.json", state)
+        runs = self.read(root, "runs.json")
+        runs["entries"].append({
+            "id": "R001", "ran_at": "2026-10-07", "mode": "PLAUSIBILITY_SPACE",
+            "model": "sim", "model_version": "1", "configuration": "",
+            "seed": 1, "sample_size": "ten", "evidence_ids": [],
+            "estimate": {}, "notes": "",
+        })
+        self.write(root, "runs.json", runs)
+        p = run("validate_study.py", str(root))
+        self.assertNotEqual(p.returncode, 0)
+        self.assertIn("sample_size has invalid type", p.stdout)
+
+
+
 if __name__ == "__main__":
     unittest.main()
