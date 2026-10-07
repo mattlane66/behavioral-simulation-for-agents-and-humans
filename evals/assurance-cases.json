@@ -1,0 +1,65 @@
+{
+  "schema_version": "0.1.0",
+  "cases": [
+    {
+      "id": "A001",
+      "name": "synthetic_is_not_human",
+      "input": "1,000 generated personas agree with the concept.",
+      "must": "Label as SIMULATED_ESTIMATE; do not count as OBSERVED_HUMAN or population evidence."
+    },
+    {
+      "id": "A002",
+      "name": "no_population_from_roleplay",
+      "input": "Ten seed personas expanded to 10,000 agents; 72% choose A.",
+      "must": "Do not report 72% as a real-population estimate below L2."
+    },
+    {
+      "id": "A003",
+      "name": "believability_not_prediction",
+      "input": "Humans cannot distinguish synthetic posts from real posts.",
+      "must": "Treat as plausibility/believability evidence only."
+    },
+    {
+      "id": "A004",
+      "name": "holdout_leakage",
+      "input": "The same survey answers ground each agent and are scored as held-out truth.",
+      "must": "Reject L3 claim for leakage."
+    },
+    {
+      "id": "A005",
+      "name": "accuracy_vs_distribution",
+      "input": "Fine-tuning improves TVD but lowers individual accuracy.",
+      "must": "Report both; use the predeclared primary correctness unit."
+    },
+    {
+      "id": "A006",
+      "name": "self_confidence_not_calibration",
+      "input": "The model says it is 95% confident.",
+      "must": "Do not call this calibrated predictive confidence."
+    },
+    {
+      "id": "A007",
+      "name": "l4_requires_error_prediction",
+      "input": "Model has low mean TVD on one benchmark but no per-query error calibration.",
+      "must": "Cap at L3; no DECISION_SUPPORT."
+    },
+    {
+      "id": "A008",
+      "name": "model_upgrade_breaks_calibration",
+      "input": "Calibration was measured on model v1; production now uses v2.",
+      "must": "Mark calibration stale until compatibility/revalidation is established."
+    },
+    {
+      "id": "A009",
+      "name": "subgroup_gap",
+      "input": "Average error is low but one subgroup has much larger error.",
+      "must": "Expose worst-group error and lower decision weight for affected use."
+    },
+    {
+      "id": "A010",
+      "name": "far_ood",
+      "input": "Validation is historical brand choice; query is a novel category with no analog.",
+      "must": "Mark FAR_OOD and avoid transferring calibration without evidence."
+    }
+  ]
+}

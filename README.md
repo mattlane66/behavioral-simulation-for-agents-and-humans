@@ -1,38 +1,62 @@
 # Behavioral Simulation for Agents and Humans
 
-Turn real human evidence and explicit assumptions into bounded behavioral simulations for exploring what people might do under changed conditions—without confusing model output with observed human behavior.
+Turn human evidence, explicit assumptions, and model outputs into bounded behavioral simulations for exploring what people might do under changed conditions—without confusing simulation with observation.
 
 > **Simulation is a model estimate, not a human observation.**
 
-## Status
+This repository contains a reusable `behavioral-simulation` skill for four related jobs:
 
-Bootstrap repository. The research-backed simulation skill, protocol, schemas, validators, evaluation harness, and integrations will be added next.
+- **plausibility-space exploration** — surface possible behaviors, edge cases, and emergent interactions without claiming prediction;
+- **individual proxy simulation** — model how a specific person might respond when grounded in that person's own data;
+- **population prediction** — estimate distributions of responses or actions for a defined population;
+- **multi-agent dynamics** — explore how interactions, memory, rules, and interventions may produce system-level behavior over time.
 
-## What this repository will own
+The method makes **simulation mode** and **evidence grade** separate. A vivid multi-agent simulation can still be low-grade evidence. A simple population distribution can be much stronger if it has held-out human validation and calibration.
 
-This repository is the canonical home for methods that:
+## Start here
 
-- define a population, context, intervention, and action or outcome space;
-- construct individual or population models from explicit evidence;
-- run behavioral counterfactuals and multi-agent simulations;
-- compare predicted response distributions across scenarios;
-- measure simulation error against held-out human or behavioral outcomes when available;
-- calibrate confidence to the evidence, task, population, and validation regime;
-- track freshness, drift, provenance, and known failure modes;
-- route uncertain or decision-critical claims back to real-world research or experiments.
+Read [`behavioral-simulation/START_HERE.md`](./behavioral-simulation/START_HERE.md).
 
-## What it will not own
+For an agent with file access, use:
 
-Behavioral simulation does **not** turn generated responses into human evidence.
+- [`behavioral-simulation/SKILL.md`](./behavioral-simulation/SKILL.md) — operating contract;
+- [`behavioral-simulation/PROTOCOL.md`](./behavioral-simulation/PROTOCOL.md) — canonical methodology;
+- [`behavioral-simulation/QUICKSTART.md`](./behavioral-simulation/QUICKSTART.md) — file-backed execution;
+- [`behavioral-simulation/PORTABLE_PROMPT.md`](./behavioral-simulation/PORTABLE_PROMPT.md) — compact prompt for environments without repo tooling.
 
-It does not independently establish:
+## Governing distinction
 
-- Lead User qualification or observed Lead User behavior;
-- prevalence, propagation, or need importance in a real population;
-- willingness to pay, adoption, retention, market size, or unit economics;
-- product-planning truth or implementation authority.
+```text
+OBSERVED HUMAN EVIDENCE
+what real people said or did
+          │
+          ├───────────────┐
+          ▼               ▼
+   model grounding   held-out validation
+          │               │
+          └──────┬────────┘
+                 ▼
+       BEHAVIORAL SIMULATION
+    what the model predicts might happen
+                 │
+                 ▼
+       SIMULATED ESTIMATE
+      + uncertainty/calibration
+```
 
-Those claims require the appropriate evidence and decision method.
+A simulation can become **better validated**. It never becomes an observed human event.
+
+## Evidence grades
+
+| Grade | Minimum basis | What it can support |
+| --- | --- | --- |
+| `L0_ROLEPLAY` | model prior + explicit prompt/assumptions | hypotheses, edge cases, possible mechanisms; **no population prediction claim** |
+| `L1_PERSON_GROUNDED` | real person-level interviews/surveys/traces used to ground agents | individual proxy exploration; still not population evidence |
+| `L2_POPULATION_GROUNDED` | real population/experimental/behavioral data with defensible sampling or coverage | model-derived population estimates, clearly labeled uncalibrated |
+| `L3_HELD_OUT_VALIDATED` | L1/L2 plus held-out real-human outcomes evaluated on the relevant task | validated estimates with observed error metrics |
+| `L4_DECISION_CALIBRATED` | L3 plus predeclared decision metric/threshold, query-class calibration, subgroup checks, freshness/drift controls | decision-weighted simulation with explicit predicted error/confidence |
+
+The grade is a ceiling, not a reward. Missing requirements lower the grade.
 
 ## Relationship to the other methods
 
@@ -50,31 +74,46 @@ Planning Skills
 What should we make, and how?
 ```
 
-This is **not a mandatory pipeline**. Each method may invoke another when the unresolved uncertainty belongs there.
+This is **not a mandatory pipeline**.
 
 - [Lead User Research](https://github.com/mattlane66/planning-skills-for-agents-and-humans/tree/main/lead-user-research) owns future-facing need discovery and real Lead User evidence.
 - [Opportunity Underwriting](https://github.com/mattlane66/opportunity-underwriting-for-agents-and-humans) owns business-level pursue / test / hold / reject decisions.
 - [Planning Skills](https://github.com/mattlane66/planning-skills-for-agents-and-humans) owns accepted product intent through implementation.
-- This repository will own behavioral simulation, validation, calibration, and simulation-specific evidence semantics.
+- This repository owns behavioral simulation, simulation-specific evidence semantics, validation, calibration, and confidence boundaries.
 
 ## Research basis
 
-The initial research set is documented in [`research/README.md`](./research/README.md). It includes work on populated social prototypes, generative-agent memory and planning, interview-grounded agents, population-level behavioral prediction, and foundation-model evaluation and risk.
+The methodology is derived from the research corpus documented in [`research/README.md`](./research/README.md) and [`behavioral-simulation/references/methodology-basis.md`](./behavioral-simulation/references/methodology-basis.md).
 
-Simile is a product reference for the capability class this repository is intended to study and reproduce methodologically where the public evidence supports it. It is not treated as an authority merely because it is a commercial implementation.
+The core lineage is:
 
-## Planned next step
+1. **Social Simulacra** — populate a proposed social system to expose a breadth of possible behavior rather than make a single point prediction.
+2. **Generative Agents** — add memory, retrieval, reflection, planning, and reaction for behavior that unfolds over time.
+3. **Generative Agent Simulations of 1,000 People / later revised self-report-grounded work** — ground individual agents in rich data from real people and evaluate against the same people's held-out responses and self-consistency.
+4. **SOCRATES / SocSci210** — train on large-scale experimental response data and evaluate both individual accuracy and population-distribution alignment on held-out studies and conditions.
+5. **Foundation Models** — treat inherited model defects, emergence, homogenization, evaluation gaps, and sociotechnical effects as first-class risks.
+6. **Simile's public methodology** — combine behavioral and self-report data, validate against real outcomes, use distributional error such as TVD, predict likely error with a separate confidence mechanism, and monitor freshness/drift.
 
-Build the first canonical `behavioral-simulation` skill from the research corpus, including:
+Simile is a product reference, not an authority over the method. Proprietary details are not inferred.
 
-1. epistemic levels for role-play, evidence-grounded, population-grounded, calibrated, and decision-calibrated simulation;
-2. a simulation brief and state contract;
-3. scenario and population specification;
-4. individual and multi-agent simulation modes;
-5. validation, calibration, confidence, and drift rules;
-6. deterministic checks that prevent synthetic output from being promoted to observed human evidence;
-7. handoff contracts with Lead User Research and Opportunity Underwriting;
-8. an assurance suite with failure cases and synthetic fixtures.
+## Repository structure
+
+```text
+behavioral-simulation/
+  SKILL.md
+  PROTOCOL.md
+  START_HERE.md
+  QUICKSTART.md
+  PORTABLE_PROMPT.md
+  references/
+  schemas/
+  scripts/
+  templates/
+evals/
+tests/
+research/
+docs/
+```
 
 ## License
 

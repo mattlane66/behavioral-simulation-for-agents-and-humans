@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Behavioral Simulation State",
+  "type": "object",
+  "required": ["schema_version","phase","status","mode","target_grade","current_grade","primary_correctness_unit","scenario_spec","population_design","model_config","counterfactual_distance","validation","calibration","stress_tests","endpoint","next_real_world_test","notes"],
+  "properties": {
+    "schema_version": {"const": "0.1.0"},
+    "phase": {"enum": ["FRAME","GROUND","SPECIFY","RUN","VALIDATE","CALIBRATE","STRESS_TEST","DELIVER","COMPLETE"]},
+    "status": {"enum": ["ACTIVE","BLOCKED","COMPLETE"]},
+    "mode": {"enum": ["PLAUSIBILITY_SPACE","INDIVIDUAL_PROXY","POPULATION_PREDICTION","MULTI_AGENT_DYNAMICS"]},
+    "target_grade": {"enum": ["L0_ROLEPLAY","L1_PERSON_GROUNDED","L2_POPULATION_GROUNDED","L3_HELD_OUT_VALIDATED","L4_DECISION_CALIBRATED"]},
+    "current_grade": {"enum": ["L0_ROLEPLAY","L1_PERSON_GROUNDED","L2_POPULATION_GROUNDED","L3_HELD_OUT_VALIDATED","L4_DECISION_CALIBRATED"]},
+    "primary_correctness_unit": {"enum": ["PLAUSIBILITY_ONLY","INDIVIDUAL","DISTRIBUTION","TREATMENT_EFFECT","SYSTEM_TRAJECTORY"]},
+    "scenario_spec": {"type": "object"},
+    "population_design": {"type": "object"},
+    "model_config": {"type": "object"},
+    "counterfactual_distance": {"enum": ["IN_DISTRIBUTION","NEAR_OOD","FAR_OOD","UNKNOWN"]},
+    "validation": {"type": "object"},
+    "calibration": {"type": "object"},
+    "stress_tests": {"type": "object"},
+    "endpoint": {"enum": ["UNSET","EXPLORE","TEST_REAL_WORLD","USE_WITH_CAUTION","DECISION_SUPPORT","DO_NOT_USE"]},
+    "next_real_world_test": {"type": "object"},
+    "notes": {"type": "array","items": {"type": "string"}}
+  },
+  "additionalProperties": false
+}
