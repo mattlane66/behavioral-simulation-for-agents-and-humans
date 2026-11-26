@@ -63,24 +63,13 @@ The paper reports:
 
 ## Self-report-grounded agents / 1,000-person lineage (Park et al., 2024+)
 
-The arXiv record supplied as "Generative Agent Simulations of 1,000 People" has been revised. The current version evaluates 1,052 U.S. participants and compares agents grounded in two-hour semi-structured interviews, structured surveys, or both.
-
-### Operational findings
-
-- rich self-report grounding outperforms demographic-only descriptions on many held-out individual tasks;
-- a broad interview protocol independent of the downstream evaluation reduces obvious task leakage;
-- expert reflections can surface latent implications but are model-generated inferences;
-- participants repeated outcome batteries after roughly two weeks;
-- model accuracy can be normalized relative to human test-retest consistency;
-- richer grounding generally reduced some demographic performance gaps relative to demographics-only prompts.
+The [November 16, 2026 revision (v4)](https://arxiv.org/abs/2411.10109v4) compares five grounding conditions across 1,052 U.S. adults. On held-out General Social Survey items, demographic, interview, survey and combined grounding scored 60.4%, 69.4%, 69.3% and 72.8%; two-week human test–retest agreement was 79.5%. The richer input did not improve incentivized economic choices. Across eight distortion measures, combined grounding reduced seven, with a median 53.5% gap closure; it did not reduce hyper-rationality. Across five replicated experiments, the median simulated-to-observed Cohen's d ratio was 4.9 even with combined grounding (Table 1). These are task-specific results, not adoption forecasts, a correction factor, or validation of this skill. Fine-tuning on other participants' answers to target questions is a different supervision regime. Start with a simple elicitation and grounding baseline; only introduce expert reflections, retrieval or elaborate prompts if ablations show benefit for the task. Treat those reflections as model-derived.
 
 ### Method carried forward
 
-`INDIVIDUAL_PROXY`:
+For predictive use, predeclare distortion checks relevant to the outcome and compare against held-out human data: mean bias; compressed variation/tail loss; distributional distance; excess inter-item correlation; dimensionality collapse; excessive association with group attributes; inflated intervention effects (direction and magnitude, including near-zero effects); and over-rationalized or over-cooperative behavior. Record metric, comparator, uncertainty, limitations and NOT_ASSESSED where data are absent. Do not equate low distortion on one task with calibration on another. In plausibility-only runs, use these as qualitative risk probes, not measured claims. When lead users or unusual behaviors matter, explicitly preserve rare mechanisms and counterexamples. Test incentivized or revealed behavior directly before assigning economic decision weight.
 
-`person's own data → traceable reflections → held-out person responses → error normalized/interpreted against self-consistency where available`
-
-Demographic prompts are a weak baseline, not a substitute for person-specific grounding.
+Use person-specific observations, a task-independent grounding design and a human reliability benchmark where available. Keep individual fidelity and aggregate fidelity distinct.
 
 ## SOCRATES / SocSci210 (Kolluri et al., EMNLP 2025)
 
