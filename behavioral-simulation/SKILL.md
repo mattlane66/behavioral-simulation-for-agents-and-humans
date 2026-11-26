@@ -163,6 +163,12 @@ A high-confidence label must mean something empirical, for example:
 
 If that sentence cannot be completed honestly, do not call the estimate calibrated.
 
+## Distortion checks
+
+For predictive use, predeclare distortion checks relevant to the outcome and compare against held-out human data: mean bias; compressed variation/tail loss; distributional distance; excess inter-item correlation; dimensionality collapse; excessive association with group attributes; inflated intervention effects (direction and magnitude, including near-zero effects); and over-rationalized or over-cooperative behavior. Record metric, comparator, uncertainty, limitations and NOT_ASSESSED where data are absent. Do not equate low distortion on one task with calibration on another. In plausibility-only runs, use these as qualitative risk probes, not measured claims. When lead users or unusual behaviors matter, explicitly preserve rare mechanisms and counterexamples. Test incentivized or revealed behavior directly before assigning economic decision weight.
+
+See [methodology basis](references/methodology-basis.md) for the v4 evidence and limits.
+
 ## Foundation-model inheritance
 
 Treat the base model as part of the instrument.

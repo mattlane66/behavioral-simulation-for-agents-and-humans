@@ -89,3 +89,13 @@ Summarize the distribution, individual proxy response, plausible mechanisms, or 
 ## Endpoint
 
 `EXPLORE | TEST_REAL_WORLD | USE_WITH_CAUTION | DECISION_SUPPORT | DO_NOT_USE`
+
+## Distortion assessment (when decision-relevant)
+
+| Distortion risk | Human comparator / metric | Result or NOT_ASSESSED | Implication for decision weight |
+|---|---|---|---|
+| Bias, variation/tails, distribution | | | |
+| Cross-item structure / group sorting | | | |
+| Intervention effect inflation / rationality | | | |
+
+Do not infer observed purchase or switching behavior from attitude fidelity. For exploratory runs, label qualitative risks as such.

@@ -472,6 +472,12 @@ Define the decision-quality threshold **before** using it:
 
 A threshold learned from internal raters for one product is not automatically transferable to another decision.
 
+## 13a. Behavioral distortion checks
+
+For predictive use, predeclare distortion checks relevant to the outcome and compare against held-out human data: mean bias; compressed variation/tail loss; distributional distance; excess inter-item correlation; dimensionality collapse; excessive association with group attributes; inflated intervention effects (direction and magnitude, including near-zero effects); and over-rationalized or over-cooperative behavior. Record metric, comparator, uncertainty, limitations and NOT_ASSESSED where data are absent. Do not equate low distortion on one task with calibration on another. In plausibility-only runs, use these as qualitative risk probes, not measured claims. When lead users or unusual behaviors matter, explicitly preserve rare mechanisms and counterexamples. Test incentivized or revealed behavior directly before assigning economic decision weight.
+
+Use a simple no-reflection baseline, and test interview-only, survey-only or combined grounding where feasible; avoid leakage from the held-out outcome. The [v4 study](https://arxiv.org/abs/2411.10109v4) demonstrates that attitude prediction can improve while economic choice fidelity does not. Do not borrow its effect ratios as universal correction factors.
+
 ## 14. Subgroup performance and bias
 
 Overall averages can conceal systematic failure.

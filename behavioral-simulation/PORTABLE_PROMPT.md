@@ -71,6 +71,8 @@ Use a task-appropriate metric. For categorical distributions, TVD is a useful de
 
 Hold out at the correct unit: person, question, study, condition, geography, or time.
 
+For predictive claims, compare relevant distortions against held-out humans (mean bias, variance/tails, distribution, cross-item correlations, dimensions, group sorting, intervention effects and excess rationality). Report unassessed distortions; never generalize attitude accuracy to revealed economic behavior. In exploratory runs these are risk probes, not measured claims.
+
 ## 7. Calibrate only if justified
 
 To claim L4, show that predicted error/confidence itself works out of sample. State the decision-quality metric/threshold and empirical success rate by confidence bucket or equivalent.
