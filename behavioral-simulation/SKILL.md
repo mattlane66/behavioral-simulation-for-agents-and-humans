@@ -211,3 +211,8 @@ Use [Lead User Research](https://github.com/mattlane66/planning-skills-for-agent
 Use [Opportunity Underwriting](https://github.com/mattlane66/opportunity-underwriting-for-agents-and-humans) when the unknown is whether an evidenced need forms a sufficiently large, reachable, economically attractive market.
 
 Use [Planning Skills](https://github.com/mattlane66/planning-skills-for-agents-and-humans) when the opportunity is accepted and the next question is what to make and how.
+
+
+## Simulation-assisted discovery and limited-data measurement
+
+Use [Simulation-assisted discovery and scarce human evidence](references/scarce-evidence.md) before, during or after empirical research when a consequential unknown warrants it. The four modes are available for discovery, person-specific hypotheses, population estimation and diffusion, not only proposed solutions. Preserve separate evidence types; no synthetic cases satisfy empirical evidence requirements. Optional SSR measures predeclared ordinal attitudes; fixed-weight PPI corrects scalar means only with independent real sampling frames and paired human outcomes. Never promote grades on computation alone. Check variance, conditional relationships, subgroup error and prompt/model sensitivity, not only mean alignment.

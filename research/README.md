@@ -1,6 +1,6 @@
 # Research corpus
 
-This repository's method is built from five unique papers supplied for the project, plus current public methodological material from Simile.
+This repository's method is built from eight unique papers (five original and three later additions), plus public methodological material from Simile.
 
 The same arXiv Foundation Models link was supplied three times; it is one unique source.
 
@@ -75,3 +75,11 @@ For every source, distinguish:
 - limitations and failure modes.
 
 See [`../behavioral-simulation/references/methodology-basis.md`](../behavioral-simulation/references/methodology-basis.md) for the operational synthesis.
+
+## Additional research
+
+6. Maier et al., [Semantic Similarity Elicitation of Likert Ratings](https://arxiv.org/abs/2510.08338): optional ordinal measurement; reuse existing Scaled Interview SSR implementation.
+7. Krsteski et al., [Valid Survey Simulations with Limited Human Data](https://aclanthology.org/2026.acl-long.498/): fixed-weight mean rectification and the case for preserving human labels for correction; no universal efficiency gain.
+8. Bisbee et al., [Synthetic Replacements for Human Survey Data?](https://doi.org/10.1017/pan.2024.5): variance, conditional relationship and model/prompt/time fidelity checks.
+
+Operational extraction: [scarce evidence](../behavioral-simulation/references/scarce-evidence.md).
