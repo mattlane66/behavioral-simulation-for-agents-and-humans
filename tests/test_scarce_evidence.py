@@ -47,4 +47,6 @@ class ScarceEvidenceTests(unittest.TestCase):
         self.assertEqual(r["human_mean"],r["predicted_mean"])
         self.assertEqual(r["predicted_sample_variance"],0)
         self.assertIsNone(r["pearson"])
+        self.assertEqual(r["validation_status"],"NOT_ASSESSED")
+        self.assertNotIn("evidence_type",r)
         self.assertFalse(r["grade_promotion"])
