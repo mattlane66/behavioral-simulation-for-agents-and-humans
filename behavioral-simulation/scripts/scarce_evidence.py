@@ -98,7 +98,7 @@ def rectify_mean(request):
 
 def fidelity(request):
     _, p, y = _rows(request["paired"], True)
-    return {"evidence_type":"CALIBRATION_EVIDENCE","n_pairs":len(y),
+    return {"comparison_type":"DESCRIPTIVE_DIAGNOSTIC","validation_status":"NOT_ASSESSED","n_pairs":len(y),
             "human_mean":st.mean(y),"predicted_mean":st.mean(p),
             "human_sample_variance":st.variance(y),"predicted_sample_variance":st.variance(p),
             "pearson":st.correlation(y,p) if st.variance(y)>0 and st.variance(p)>0 else None,
