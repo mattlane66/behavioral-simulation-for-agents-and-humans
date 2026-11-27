@@ -89,3 +89,8 @@ Return:
 8. what it does not support;
 9. highest-value real-world test;
 10. endpoint: `EXPLORE | TEST_REAL_WORLD | USE_WITH_CAUTION | DECISION_SUPPORT | DO_NOT_USE`.
+
+
+## Simulation-assisted discovery and limited-data measurement
+
+Use [Simulation-assisted discovery and scarce human evidence](references/scarce-evidence.md) before, during or after empirical research when a consequential unknown warrants it. The four modes are available for discovery, person-specific hypotheses, population estimation and diffusion, not only proposed solutions. Preserve separate evidence types; no synthetic cases satisfy empirical evidence requirements. Optional SSR measures predeclared ordinal attitudes; fixed-weight PPI corrects scalar means only with independent real sampling frames and paired human outcomes. Never promote grades on computation alone. Check variance, conditional relationships, subgroup error and prompt/model sensitivity, not only mean alignment.
