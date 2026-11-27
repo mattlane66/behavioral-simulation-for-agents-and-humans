@@ -23,6 +23,25 @@ class ScarceEvidenceTests(unittest.TestCase):
         r=run(q)
         self.assertEqual(r["rectified_mean"],r["human_only_mean"])
         self.assertEqual(r["estimated_variance"],r["human_only_estimated_variance"])
+    def test_independent_pilot_weight_matches_scalar_derivation(self):
+        q = request()
+        del q["weight"]
+        q["design"].update(independent_tuning_sample_same_target=True,
+                           tuning_provenance="fixture only")
+        q["tuning"] = [dict(unit_id="t1", prediction=1, human_outcome=3),
+                       dict(unit_id="t2", prediction=3, human_outcome=5)]
+        result = run(q)
+        self.assertEqual(result["weight_selection"], "INDEPENDENT_PILOT")
+        self.assertEqual(result["estimate_basis"], "MODEL_ASSISTED_STATISTICAL_ESTIMATE")
+        self.assertAlmostEqual(result["weight"], 0.5)
+        self.assertAlmostEqual(result["rectified_mean"], 2.5)
+        self.assertAlmostEqual(result["estimated_variance"], 0.5)
+        q["tuning"][0]["unit_id"] = "h1"
+        with self.assertRaisesRegex(ValueError, "Tuning and inference"):
+            run(q)
+        q["tuning"][0]["unit_id"] = "t1"
+        q["tuning"][0]["prediction"] = q["tuning"][1]["prediction"]
+        self.assertEqual(run(q)["weight"], 0)
     def test_overlap(self):
         q=request();q["unlabeled"][0]["unit_id"]="h1"
         with self.assertRaises(ValueError):run(q)
@@ -42,6 +61,7 @@ class ScarceEvidenceTests(unittest.TestCase):
         r=run(dict(operation="ssr",vector=[1,0],anchor_vectors=[[-1,0],[0,-1],[0,1],[1,1],[1,0]]))
         self.assertAlmostEqual(sum(r["rating_probabilities"]),1)
         self.assertEqual(r["evidence_type"],"SIMULATED_ESTIMATE")
+        self.assertEqual(r["transform"], "LEGACY_UNIFORM_EPSILON")
     def test_variance_mismatch(self):
         r=run(dict(operation="fidelity",paired=[dict(unit_id="a",prediction=2,human_outcome=1),dict(unit_id="b",prediction=2,human_outcome=3)]))
         self.assertEqual(r["human_mean"],r["predicted_mean"])

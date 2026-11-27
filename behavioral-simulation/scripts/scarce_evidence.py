@@ -1,7 +1,8 @@
 """Bounded deterministic measurement; outputs are not human observations.
-SSR primitive extracted from Scaled Interview Data Assistant 38b85c6 (MIT),
-Maier et al. arXiv:2510.08338v3. Fixed-weight PPI mean: Krsteski et al.
-ACL 2026, eqs 1–3. No automatic calibration or survey-design verification.
+Legacy SSR primitive from Scaled Interview Data Assistant 38b85c6 (MIT).
+PPI mean: Krsteski et al. ACL 2026, Eqs. 1–3. Optional independent-pilot
+weight uses the scalar variance objective in PPI++ §6. No automatic survey-
+design verification, confidence interval or calibration.
 """
 from __future__ import annotations
 import argparse
@@ -78,17 +79,34 @@ def rectify_mean(request):
     for field in ("population", "estimand", "model_version", "provenance"):
         if not isinstance(design.get(field), str) or not design[field].strip():
             raise ValueError("Missing design metadata: " + field)
-    weight = _number(request["weight"])
-    if not 0 <= weight <= 1:
-        raise ValueError("Weight must be within [0,1]")
     ui, u, _ = _rows(request["unlabeled"])
     hi, p, y = _rows(request["labeled"], True)
     if ui & hi:
         raise ValueError("Labeled and unlabeled units overlap")
+    if "tuning" in request:
+        if "weight" in request:
+            raise ValueError("Supply a fixed weight or independent tuning, whichever the design declares")
+        if design.get("independent_tuning_sample_same_target") is not True:
+            raise ValueError("Independent same-target tuning sample must be attested")
+        if not isinstance(design.get("tuning_provenance"), str) or not design["tuning_provenance"].strip():
+            raise ValueError("Missing tuning provenance")
+        ti, tp, ty = _rows(request["tuning"], True)
+        if ti & (ui | hi):
+            raise ValueError("Tuning and inference units overlap")
+        denominator = (1 + len(y) / len(u)) * st.variance(tp)
+        weight = min(1.0, max(0.0, st.covariance(ty, tp) / denominator)) if denominator else 0.0
+        weight_selection = "INDEPENDENT_PILOT"
+    else:
+        weight = _number(request["weight"])
+        if not 0 <= weight <= 1:
+            raise ValueError("Weight must be within [0,1]")
+        weight_selection = "FIXED"
     residual = [a-weight*b for a,b in zip(y,p,strict=True)]
     variance = weight**2*st.variance(u)/len(u) + st.variance(residual)/len(y)
     baseline_var = st.variance(y)/len(y)
-    return {"evidence_type":"SIMULATED_ESTIMATE","method":"FIXED_WEIGHT_PPI_MEAN",
+    return {"evidence_type":"SIMULATED_ESTIMATE",
+            "estimate_basis":"MODEL_ASSISTED_STATISTICAL_ESTIMATE",
+            "method":"FIXED_WEIGHT_PPI_MEAN","weight_selection":weight_selection,
             "weight":weight,"n_human":len(y),"n_real_covariate_units":len(u),
             "human_only_mean":st.mean(y),"raw_prediction_mean":st.mean(u),
             "rectified_mean":weight*st.mean(u)+st.mean(residual),
@@ -111,7 +129,8 @@ def run(request):
     if op=="fidelity": return fidelity(request)
     if op=="ssr":
         pmf=distribution(request["vector"],request["anchor_vectors"],request.get("epsilon",0.0),request.get("temperature",1.0))
-        return {"evidence_type":"SIMULATED_ESTIMATE","rating_probabilities":pmf,"grade_promotion":False}
+        return {"evidence_type":"SIMULATED_ESTIMATE","transform":"LEGACY_UNIFORM_EPSILON",
+                "rating_probabilities":pmf,"grade_promotion":False}
     raise ValueError("Unsupported operation")
 
 def main():
