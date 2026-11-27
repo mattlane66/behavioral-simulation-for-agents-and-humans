@@ -66,7 +66,41 @@ class ScarceEvidenceTests(unittest.TestCase):
         r=run(dict(operation="fidelity",paired=[dict(unit_id="a",prediction=2,human_outcome=1),dict(unit_id="b",prediction=2,human_outcome=3)]))
         self.assertEqual(r["human_mean"],r["predicted_mean"])
         self.assertEqual(r["predicted_sample_variance"],0)
+        self.assertEqual(r["spread_ratio"], 0)
+        self.assertEqual(r["absolute_standardized_mean_gap"], 0)
         self.assertIsNone(r["pearson"])
         self.assertEqual(r["validation_status"],"NOT_ASSESSED")
         self.assertNotIn("evidence_type",r)
         self.assertFalse(r["grade_promotion"])
+
+    def test_ordinal_distances_respect_spacing(self):
+        request = dict(operation="ordinal_fidelity", scale=[0, 2, 3],
+                       predicted=[1, 0, 0], observed=[0, 0.5, 0.5])
+        result = run(request)
+        self.assertAlmostEqual(result["wasserstein"], 2.5)
+        self.assertAlmostEqual(result["normalized_wasserstein"], 5 / 6)
+        self.assertEqual(result["ks_similarity"], 0)
+        self.assertEqual(result["tvd"], 1)
+        self.assertFalse(result["grade_promotion"])
+        request["scale"] = [0, 0, 2]
+        with self.assertRaisesRegex(ValueError, "strictly increasing"):
+            run(request)
+
+    def test_error_diagnostics_include_auroc_ties_and_acceptance(self):
+        request = dict(operation="error_fidelity", decision_error_threshold=0.5,
+                       accept_predicted_error_below=0.5, paired=[
+            dict(unit_id="q1", prediction=0.2, human_outcome=0.2),
+            dict(unit_id="q2", prediction=0.4, human_outcome=0.3),
+            dict(unit_id="q3", prediction=0.4, human_outcome=0.6),
+            dict(unit_id="q4", prediction=0.7, human_outcome=0.8),
+        ])
+        result = run(request)
+        self.assertAlmostEqual(result["rmse"], (0.06 / 4) ** 0.5)
+        self.assertAlmostEqual(result["decision_quality_auroc"], 7 / 8)
+        self.assertEqual(result["accepted_fraction"], 3 / 4)
+        self.assertAlmostEqual(result["error_rate_among_accepted"], 1 / 3)
+        self.assertEqual(result["validation_status"], "NOT_ASSESSED")
+        request["accept_predicted_error_below"] = 0
+        self.assertIsNone(run(request)["error_rate_among_accepted"])
+        request["decision_error_threshold"] = 1
+        self.assertIsNone(run(request)["decision_quality_auroc"])

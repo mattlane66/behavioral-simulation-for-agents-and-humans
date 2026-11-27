@@ -45,7 +45,20 @@ Bisbee et al., [Political Analysis 2024](https://doi.org/10.1017/pan.2024.5), sh
 
 ## Reproducible computational slice
 
-`python behavioral-simulation/scripts/scarce_evidence.py input.json output.json` accepts a JSON request with operation `rectify_mean`, `ssr` or `fidelity`. See the tests for examples. The script refuses overlapping/duplicate person IDs and requires explicit design attestations for correction; those attestations are not independent verification. Keep it outside evidence banks. Run `python -m unittest discover -s tests -p test_scarce_evidence.py`. No provider calls, external data transfers or dependency installs.
+`python behavioral-simulation/scripts/scarce_evidence.py input.json output.json` accepts a JSON request. See the tests for complete examples.
+
+| Operation | Input and result |
+|---|---|
+| `rectify_mean` | Real labeled and covariate samples, design attestation and declared weight rule. Returns a model-assisted estimate and variance. |
+| `ssr` | Embeddings and mapping parameters. Returns the legacy ordinal PMF. |
+| `fidelity` | Paired scalar predictions and human outcomes. Computes means, sample variance, standardized gap, spread ratio, Pearson and MAE. |
+| `ordinal_fidelity` | `scale` points and ordered `predicted` and `observed` PMFs. Returns Wasserstein in scale units, normalized Wasserstein, KS similarity and TVD. Use declared cardinal spacing for Wasserstein. |
+| `error_fidelity` | `paired` with one unique `unit_id` per query and `prediction`/ `human_outcome` as predicted/observed TVD. Uses `decision_error_threshold` and `accept_predicted_error_below` to compute RMSE, Pearson, threshold AUROC, accepted fraction and error rate among accepted queries. |
+
+These diagnostics require matched inputs, prespecified units and provenance.
+Validate splits and estimate uncertainty outside the script. Design attestations
+and diagnostic arithmetic do not verify holdout independence or calibration.
+Keep the output outside evidence banks. Run `python -m unittest discover -s tests -p test_scarce_evidence.py`.
 
 ## Integration acceptance
 
