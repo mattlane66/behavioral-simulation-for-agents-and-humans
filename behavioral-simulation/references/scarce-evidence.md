@@ -41,7 +41,7 @@ Use real covariates and paired human labels from a defensible design. Keep purpo
 
 ## Fidelity stress tests
 
-Bisbee et al., [Political Analysis 2024](https://doi.org/10.1017/pan.2024.5), show that matching means can mask compressed variance and distorted relationships; outputs shift with model and prompt. Compare mean, variance, distribution, subgroup errors and conditional relationships on relevant human holdouts; log prompt/model/time sensitivity. Averages alone cannot establish fidelity. The shared diagnostic computes means, sample variances and paired Pearson correlation only; other tests are explicit obligations, not implied by the function.
+Bisbee et al., [Political Analysis 2024](https://doi.org/10.1017/pan.2024.5), show that matching means can mask compressed variance and distorted relationships. Compare means, spread, outcome distribution, subgroup errors and conditional relationships on relevant human holdouts. Log prompt, model and time sensitivity. The diagnostics below support the scalar and distribution comparisons. Conditional relationships require their own model and design-aware uncertainty.
 
 ## Reproducible computational slice
 
